@@ -8,50 +8,66 @@ function validarId(valor) {
   return id;
 }
 
-function criar(req, res) {
-  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-    return res.status(400).json({ erro: 'O corpo da requisição deve ser um objeto JSON.' });
+function criar(req, res, next) {
+  try {
+    const resultado = pedidosService.criar(req.body);
+    if (resultado.erro) {
+      return res.status(400).json({ erro: resultado.erro });
+    }
+    return res.status(201).json(resultado.pedido);
+  } catch (err) {
+    next(err);
   }
-
-  const pedido = pedidosService.criar(req.body);
-  return res.status(201).json(pedido);
 }
 
-function listar(req, res) {
-  return res.status(200).json(pedidosService.listar());
+function listar(req, res, next) {
+  try {
+    return res.status(200).json(pedidosService.listar());
+  } catch (err) {
+    next(err);
+  }
 }
 
-function buscarPorId(req, res) {
-  const id = validarId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ erro: 'ID inválido.' });
-  }
+function buscarPorId(req, res, next) {
+  try {
+    const id = validarId(req.params.id);
+    if (id === null) {
+      return res.status(404).json({ erro: 'Pedido não encontrado.' });
+    }
 
-  const pedido = pedidosService.buscarPorId(id);
-  if (!pedido) {
-    return res.status(404).json({ erro: 'Pedido não encontrado.' });
-  }
+    const pedido = pedidosService.buscarPorId(id);
+    if (!pedido) {
+      return res.status(404).json({ erro: 'Pedido não encontrado.' });
+    }
 
-  return res.status(200).json(pedido);
+    return res.status(200).json(pedido);
+  } catch (err) {
+    next(err);
+  }
 }
 
-function atualizarStatus(req, res) {
-  const id = validarId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ erro: 'ID inválido.' });
-  }
+function atualizarStatus(req, res, next) {
+  try {
+    const id = validarId(req.params.id);
+    if (id === null) {
+      return res.status(404).json({ erro: 'Pedido não encontrado.' });
+    }
 
-  const status = req.body ? req.body.status : null;
-  const pedido = pedidosService.atualizarStatus(id, status);
-  if (pedido === null) {
-    return res.status(404).json({ erro: 'Pedido não encontrado.' });
-  }
+    const status = req.body ? req.body.status : null;
+    const pedido = pedidosService.atualizarStatus(id, status);
 
-  if (pedido === false) {
-    return res.status(400).json({ erro: 'Essa mudança de status não é permitida.' });
-  }
+    if (pedido === null) {
+      return res.status(404).json({ erro: 'Pedido não encontrado.' });
+    }
 
-  return res.status(200).json(pedido);
+    if (pedido === false) {
+      return res.status(400).json({ erro: 'Essa mudança de status não é permitida.' });
+    }
+
+    return res.status(200).json(pedido);
+  } catch (err) {
+    next(err);
+  }
 }
 
 module.exports = { criar, listar, buscarPorId, atualizarStatus };
