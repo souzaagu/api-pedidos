@@ -1,14 +1,31 @@
 const request = require('supertest');
 const app = require('../src/app');
+const pedidosService = require('../src/services/pedidosService');
 
 describe('API de pedidos', () => {
+  beforeEach(() => {
+    pedidosService.limpar();
+  });
+
   test('cria, mostra e muda o status do pedido', async () => {
     const criacao = await request(app)
       .post('/pedidos')
-      .send({ cliente: 'Ana', itens: ['produto'] });
+      .send({
+        cliente: 'Carlos Silva',
+        tipo: 'entrega',
+        valor: 350,
+        prioridade: 'normal'
+      });
 
     expect(criacao.status).toBe(201);
-    expect(criacao.body).toMatchObject({ id: 1, status: 'recebido', cliente: 'Ana' });
+    expect(criacao.body).toEqual({
+      id: 1,
+      cliente: 'Carlos Silva',
+      tipo: 'entrega',
+      valor: 350,
+      prioridade: 'normal',
+      status: 'recebido'
+    });
 
     const listagem = await request(app).get('/pedidos');
     expect(listagem.status).toBe(200);
@@ -47,12 +64,30 @@ describe('API de pedidos', () => {
     expect(cancelamentoTardio.status).toBe(400);
   });
 
-  test('permite cancelar antes do envio e mostra erro para pedido ausente', async () => {
-    const criacao = await request(app).post('/pedidos').send({ cliente: 'Bia' });
-    expect(criacao.body.id).toBe(2);
+  test('permite cancelar antes do envio e mostra erro para pedido ausente ou invalido', async () => {
+    const invalido = await request(app)
+      .post('/pedidos')
+      .send({
+        cliente: '   ',
+        tipo: 'entrega',
+        valor: 0,
+        prioridade: 'normal'
+      });
+    expect(invalido.status).toBe(400);
+
+    const criacao = await request(app)
+      .post('/pedidos')
+      .send({
+        cliente: 'Bia',
+        tipo: 'retirada',
+        valor: 120,
+        prioridade: 'alta'
+      });
+    expect(criacao.status).toBe(201);
+    expect(criacao.body.id).toBe(1);
 
     const cancelamento = await request(app)
-      .patch('/pedidos/2/status')
+      .patch('/pedidos/1/status')
       .send({ status: 'cancelado' });
     expect(cancelamento.status).toBe(200);
     expect(cancelamento.body.status).toBe('cancelado');
